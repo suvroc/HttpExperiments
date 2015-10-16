@@ -5,10 +5,11 @@ using System.Net;
 using System.Net.Http;
 using System.Web.Http;
 using System.Web.Http.Results;
+using Ploeh.Hyprlinkr;
 
 namespace HttpExperiments.Controllers
 {
-    [Authorize]
+    [RoutePrefix("apiv1/Values")]
     public class StatusValuesController : ApiController
     {
         private static List<KeyValuePair<int, string>> values = new List<KeyValuePair<int, string>>()
@@ -18,28 +19,49 @@ namespace HttpExperiments.Controllers
         };
 
         // GET: api/Values
+        [HttpGet]
+        [Route("", Name = "aaa")]
         public IEnumerable<KeyValuePair<int, string>> Get()
         {
             return values;
         }
 
         // GET: api/Values/5
-        public KeyValuePair<int, string> Get(int id)
+        // KeyValuePair<int, string>
+        [HttpGet]
+        [Route("{id}", Name = "aaa2")]
+        public HttpResponseMessage Get(HttpRequestMessage request, int id)
         {
-            return values.Find(x => x.Key == id);
+            if (!values.Exists(x => x.Key == id))
+            {
+                return Request.CreateResponse(HttpStatusCode.NotFound);
+            }
+            return Request.CreateResponse(HttpStatusCode.OK, values.Find(x => x.Key == id));
         }
 
         // POST: api/Values
-        // Statuses: 206 (partial Content), 304 (Not Modified), 416 (Range Nor Satisfiable)
+        // OK, Created, 
         // Header: Location; address of created resource
-        public void Post(HttpRequestMessage request, [FromBody] string value)
+        [HttpPost]
+        [Route("")]
+        public HttpResponseMessage Post(HttpRequestMessage request, [FromBody] string value)
         {
-            values.Add(new KeyValuePair<int, string>(values.Max(x => x.Key) + 1, value));
-            var aaa = request.CreateResponse(HttpStatusCode.OK, 12);
+            var key = values.Max(x => x.Key) + 1;
+            values.Add(new KeyValuePair<int, string>(key, value));
+
+            var response = Request.CreateResponse(HttpStatusCode.Created);
+            // TODO: https://github.com/ploeh/Hyprlinkr
+
+            var aaa = this.Url.GetLink<StatusValuesController>(a => a.Get(null, key));
+
+            var uriString = this.Url.Link("DefaultApi", new { action = "Get", id = key });
+            response.Headers.Location = new Uri(uriString);
+            return response;
         }
 
         // PUT: api/Values/5
         [HttpPut]
+        [Route("{id}")]
         //[Route("api/Values/{}")]
         public void Put(int id, [FromBody] string value)
         {
@@ -50,10 +72,17 @@ namespace HttpExperiments.Controllers
             }
         }
 
-        // DELETE: api/Values/5
-        public void Delete(int id)
+        [HttpDelete]
+        [Route("{id}")]
+        public HttpResponseMessage Delete(int id)
         {
-            values.RemoveAll(x => x.Key == id);
+            var deletedCount = values.RemoveAll(x => x.Key == id);
+
+            if (deletedCount <= 0)
+            {
+                return Request.CreateResponse(HttpStatusCode.NotFound);
+            }
+            return Request.CreateResponse(HttpStatusCode.NoContent);
         }
     }
 }
