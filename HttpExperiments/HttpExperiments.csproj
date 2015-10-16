@@ -87,7 +87,9 @@
   <ItemGroup>
     <Compile Include="App_Start\WebApiConfig.cs" />
     <Compile Include="Controllers\CacheController.cs" />
+    <Compile Include="Controllers\StatusValuesController.cs" />
     <Compile Include="Controllers\ValuesController.cs" />
+    <Compile Include="Filters\StatusCodeExceptionFilterAttribute.cs" />
     <Compile Include="Global.asax.cs">
       <DependentUpon>Global.asax</DependentUpon>
     </Compile>
